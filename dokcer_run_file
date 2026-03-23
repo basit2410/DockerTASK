@@ -1,0 +1,35 @@
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+COPY app.py .
+
+#Final runtime image
+
+FROM python:3.13-slim
+
+# Keep OS packages up to date, then clean up cache
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user
+RUN useradd -r -s /sbin/nologin doc1
+
+WORKDIR /app
+
+# Copy app from builder
+COPY --from=builder /app/app.py .
+
+# Lock down file permissions
+RUN chown doc1:doc1 app.py \
+    && chmod 500 app.py
+
+# Drop to non-root user
+USER doc1
+
+LABEL maintainer="your-team@example.com" \
+      version="1.0.0" \
+      description="Minimal Hello World Python app"
+
+CMD ["python", "app.py"]
